@@ -188,7 +188,6 @@ namespace EngineLayer
                     // this scan might already have a hit from a different database partition; check to see if the score improves
                     if (GlobalCsms[scanIndex] == nullptr )
                     {
-                        #pragma omp critical
                         GlobalCsms[scanIndex] = csm;
                     }
                     else if ( GlobalCsms[scanIndex]->getXLTotalScore() < csm->getXLTotalScore() )
