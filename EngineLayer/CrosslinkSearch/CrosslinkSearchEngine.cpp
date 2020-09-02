@@ -111,6 +111,7 @@ namespace EngineLayer
             
             int ListOfSortedMs2Scanssize = (int) ListOfSortedMs2Scans.size();
             int PeptideIndexsize = PeptideIndex.size();
+            #pragma omp parallel for
             for (int scanIndex = 0; scanIndex < ListOfSortedMs2Scanssize; scanIndex++)
             {            
                 std::vector<unsigned char> scoringTable(PeptideIndexsize );
@@ -187,6 +188,7 @@ namespace EngineLayer
                     // this scan might already have a hit from a different database partition; check to see if the score improves
                     if (GlobalCsms[scanIndex] == nullptr )
                     {
+                        #pragma omp critical
                         GlobalCsms[scanIndex] = csm;
                     }
                     else if ( GlobalCsms[scanIndex]->getXLTotalScore() < csm->getXLTotalScore() )
@@ -227,20 +229,6 @@ namespace EngineLayer
         {
             ModificationMotif *motif;
             ModificationMotif::TryGetMotif("X", &motif);
-#ifdef ORIG
-            TrisDeadEnd = new Modification(_originalId: "Tris Dead End", _modificationType: "Crosslink",
-                                           _locationRestriction: "Anywhere.", _target: motif,
-                                           _monoisotopicMass: privateCrosslinker->getDeadendMassTris());
-            H2ODeadEnd = new Modification(_originalId: "H2O Dead End", _modificationType: "Crosslink",
-                                          _locationRestriction: "Anywhere.", _target: motif,
-                                          _monoisotopicMass: privateCrosslinker->getDeadendMassH2O());
-            NH2DeadEnd = new Modification(_originalId: "NH2 Dead End", _modificationType: "Crosslink",
-                                          _locationRestriction: "Anywhere.", _target: motif,
-                                          _monoisotopicMass: privateCrosslinker->getDeadendMassNH2());
-            Loop = new Modification(_originalId: "Loop", _modificationType: "Crosslink",
-                                    _locationRestriction: "Anywhere.", _target: motif,
-                                    _monoisotopicMass: privateCrosslinker->getLoopMass());
-#endif
             std::string oId = "";
             std::string acc = "";
             std::string modType = "";
