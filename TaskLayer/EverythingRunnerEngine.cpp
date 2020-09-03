@@ -43,6 +43,12 @@ namespace TaskLayer
     
     void EverythingRunnerEngine::Run()
     {
+        // We might need to initialize all required static constructors to avoid a race-condition in multi-threaded
+        // settings
+        auto ap = Proteomics::AminoAcidPolymer::Residue::GetResidue('A');
+        
+        
+
         time_t timer;
         time(&timer);
         struct tm *tmi_start = localtime(&timer);
