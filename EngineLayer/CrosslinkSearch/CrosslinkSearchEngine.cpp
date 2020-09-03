@@ -20,6 +20,7 @@
 #include <chrono>
 #endif
 
+#include "omp.h"
 
 using namespace EngineLayer::ModernSearch;
 using namespace MzLibUtil;
@@ -111,13 +112,19 @@ namespace EngineLayer
             
             int ListOfSortedMs2Scanssize = (int) ListOfSortedMs2Scans.size();
             int PeptideIndexsize = PeptideIndex.size();
-            #pragma omp parallel for
+
+#pragma omp parallel
+         {
+
+             std::unordered_map <int, CrosslinkSpectralMatch *> localinfo; // per thread
+
+#pragma omp for
             for (int scanIndex = 0; scanIndex < ListOfSortedMs2Scanssize; scanIndex++)
             {            
                 std::vector<unsigned char> scoringTable(PeptideIndexsize );
                 std::vector<int> idsOfPeptidesPossiblyObserved;
                 auto scan = ListOfSortedMs2Scans[scanIndex];
-                
+
 #ifdef TIMING_INFO
                 auto t0 = std::chrono::high_resolution_clock::now();
 #endif
@@ -188,19 +195,18 @@ namespace EngineLayer
                     // this scan might already have a hit from a different database partition; check to see if the score improves
                     if (GlobalCsms[scanIndex] == nullptr )
                     {
-                        GlobalCsms[scanIndex] = csm;
+                        localinfo[scanIndex] = csm;
                     }
-                    else if ( GlobalCsms[scanIndex]->getXLTotalScore() < csm->getXLTotalScore() )
+                    else if ( localinfo[scanIndex]->getXLTotalScore() < csm->getXLTotalScore() )
                     {
-                        delete GlobalCsms[scanIndex];
-                        GlobalCsms[scanIndex] = csm;
+                        delete localinfo[scanIndex];
+                        localinfo[scanIndex] = csm;
                     }
                 }
                 
                 // report search progress
                 progress++;
-                auto percentProgress = static_cast<int>((progress / ListOfSortedMs2Scans.size()) * 100);
-                
+                auto percentProgress = static_cast<int>((progress / ListOfSortedMs2Scanssize) * 100);                
                 if (percentProgress > oldPercentProgress)
                 {
                     oldPercentProgress = percentProgress;
@@ -211,6 +217,14 @@ namespace EngineLayer
                     delete p;
                 }                
             }
+#pragma omp critical
+             for ( auto p = localinfo.begin(); p!= localinfo.end(); p++ ) {
+                 auto key = p->first;
+                 auto value = p->second;
+                 GlobalCsms[key] = value;
+             }
+
+         } // omp parallel
 
 #ifdef TIMING_INFO
             auto txe = std::chrono::high_resolution_clock::now();
