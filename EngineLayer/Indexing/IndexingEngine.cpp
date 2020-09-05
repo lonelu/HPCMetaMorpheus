@@ -111,7 +111,7 @@ namespace EngineLayer
                 int num_threads = omp_get_num_threads();
                 double progress = 0;
             
-#pragma omp for
+#pragma omp for schedule(guided)
                 for ( int i = 0; i < ProteinListsize; i++ ) {
                     progress++;
                     std::vector<Modification*> *fixedmodis = const_cast<std::vector<Modification*>*> (&FixedModifications);
@@ -169,11 +169,11 @@ namespace EngineLayer
                 std::map<int, std::vector<int>> local_fragmentIndex;
                 double progress = 0;
 
-#pragma omp for
+#pragma omp for schedule(guided)
                 for (int peptideId = 0; peptideId < peptidesSortedByMasssize; peptideId++)
                 {
                     auto t = peptidesSortedByMass[peptideId]->Fragment(commonParameters->getDissociationType(),
-                                                                       commonParameters->getDigestionParams()->getFragmentationTerminus());
+                                           commonParameters->getDigestionParams()->getFragmentationTerminus());
                     std::vector<double> fragmentMasses;
                     for ( auto m: t ) {
                         fragmentMasses.push_back(m->NeutralMass);
@@ -219,6 +219,7 @@ namespace EngineLayer
 
             // fragmentIndex needs to be sorted to match the result of the sequential case. Not sure whether it is
             // required for correctness though.
+#pragma omp parallel for schedule(guided)
             for ( int i = 0; i < fragmentIndex.size(); i++  ) {
                 if (!fragmentIndex[i].empty() ) {
                     std::sort(fragmentIndex[i].begin(), fragmentIndex[i].end() );

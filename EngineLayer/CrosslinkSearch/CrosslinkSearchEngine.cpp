@@ -119,7 +119,7 @@ namespace EngineLayer
              int tid = omp_get_thread_num();
              int num_threads = omp_get_num_threads();
              
-#pragma omp for
+#pragma omp for schedule(guided)
             for (int scanIndex = 0; scanIndex < ListOfSortedMs2Scanssize; scanIndex++)
             {            
                 std::vector<unsigned char> scoringTable(PeptideIndexsize );
