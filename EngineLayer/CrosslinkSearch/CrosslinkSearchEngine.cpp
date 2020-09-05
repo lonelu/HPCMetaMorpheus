@@ -97,7 +97,6 @@ namespace EngineLayer
         
         MetaMorpheusEngineResults *CrosslinkSearchEngine::RunSpecific()
         {
-            double progress = 0;
             int oldPercentProgress = 0;
 #ifdef TIMING_INFO
             long long int indexedScoringTime=0, bestPeptideScoreNotchTime=0, findCrosslinkedPeptideTime=0, binsSearchTime=0;
@@ -115,9 +114,11 @@ namespace EngineLayer
 
 #pragma omp parallel
          {
-
-             std::unordered_map <int, CrosslinkSpectralMatch *> localinfo; // per thread
-
+             double progress = 0;
+             std::map <int, CrosslinkSpectralMatch *> localinfo; // per thread
+             int tid = omp_get_thread_num();
+             int num_threads = omp_get_num_threads();
+             
 #pragma omp for
             for (int scanIndex = 0; scanIndex < ListOfSortedMs2Scanssize; scanIndex++)
             {            
@@ -204,25 +205,30 @@ namespace EngineLayer
                     }
                 }
                 
-                // report search progress
-                progress++;
-                auto percentProgress = static_cast<int>((progress / ListOfSortedMs2Scanssize) * 100);                
-                if (percentProgress > oldPercentProgress)
+                if ( tid == 0 ) 
                 {
-                    oldPercentProgress = percentProgress;
-                    ReportEngineProgress("Performing crosslink search... " + std::to_string(CurrentPartition) + "/" +
-                                         std::to_string(commonParameters->getTotalPartitions()), percentProgress);
+                    // report search progress
+                    progress++;
+                    auto percentProgress = static_cast<int>(((progress * omp_get_num_threads()) / ListOfSortedMs2Scanssize) * 100);                
+                    if (percentProgress > oldPercentProgress)
+                    {
+                        oldPercentProgress = percentProgress;
+                        ReportEngineProgress("Performing crosslink search... " + std::to_string(CurrentPartition) + "/" +
+                                             std::to_string(commonParameters->getTotalPartitions()), percentProgress);
+                    }
                 }
                 for ( auto p:  bestPeptideScoreNotchList ) {
                     delete p;
                 }                
             }
 #pragma omp critical
-             for ( auto p = localinfo.begin(); p!= localinfo.end(); p++ ) {
-                 auto key = p->first;
-                 auto value = p->second;
-                 GlobalCsms[key] = value;
-             }
+            {
+                for ( auto p = localinfo.begin(); p!= localinfo.end(); p++ ) {
+                    auto key = p->first;
+                    auto value = p->second;
+                    GlobalCsms[key] = value;
+                }
+            }
 
          } // omp parallel
 
